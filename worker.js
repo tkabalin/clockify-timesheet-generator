@@ -449,13 +449,13 @@ const HTML = `<!DOCTYPE html>
       const pageStyle = {
         minHeight: PAGE_PREVIEW_HEIGHT,
         background: "#fff",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.08)",
         fontFamily: "'Inter', sans-serif",
         color: DARK,
         display: "flex",
         flexDirection: "column",
         padding: "40px 48px",
-        marginBottom: 24,
+        marginBottom: 32,
       };
 
       const pageBodyStyle = { flex: 1, display: "flex", flexDirection: "column" };
