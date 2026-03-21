@@ -77,6 +77,13 @@ const HTML = `<!DOCTYPE html>
     const TEAL = "#00727d";
     const DARK = "#0f172a";
     const DESIGN_WIDTH = 820;
+    const PAGE_PREVIEW_HEIGHT = 1160;
+    const SUMMARY_FIRST_PAGE_UNITS = 14;
+    const SUMMARY_CONT_PAGE_UNITS = 20;
+    const SUMMARY_LAST_PAGE_RESERVE = 5;
+    const LOG_FIRST_PAGE_ROWS = 18;
+    const LOG_CONT_PAGE_ROWS = 22;
+    const LOG_LAST_PAGE_RESERVE = 2;
 
     const fmt = (n) => {
       const str = n.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -128,6 +135,63 @@ const HTML = `<!DOCTYPE html>
       )
     );
 
+    const estimateSummaryRowUnits = (line) => {
+      const tasks = parseTasks(line?.description || "");
+      if (!tasks.length) return 1;
+      const byCount = Math.ceil(tasks.length / 4);
+      const byChars = Math.ceil(tasks.join(", ").length / 42);
+      return Math.max(1, byCount, byChars);
+    };
+
+    const estimateBankUnits = (details) => {
+      if (!details) return 0;
+      const lines = details.split(/\\r?\\n/).map((l) => l.trim()).filter(Boolean).length;
+      return 2 + Math.ceil(lines / 2);
+    };
+
+    const chunkRowsByUnits = (rows, firstCapacity, nextCapacity, getUnits) => {
+      const out = [];
+      let i = 0;
+      let capacity = firstCapacity;
+      while (i < rows.length) {
+        let used = 0;
+        const chunk = [];
+        while (i < rows.length) {
+          const units = Math.max(1, getUnits(rows[i]));
+          if (chunk.length && used + units > capacity) break;
+          chunk.push(rows[i]);
+          used += units;
+          i += 1;
+          if (used >= capacity) break;
+        }
+        if (!chunk.length && i < rows.length) {
+          chunk.push(rows[i]);
+          i += 1;
+        }
+        out.push(chunk);
+        capacity = nextCapacity;
+      }
+      return out.length ? out : [[]];
+    };
+
+    const paginateSummaryRows = (rows, bankDetails) => {
+      const chunks = chunkRowsByUnits(rows, SUMMARY_FIRST_PAGE_UNITS, SUMMARY_CONT_PAGE_UNITS, estimateSummaryRowUnits);
+      const lastIdx = chunks.length - 1;
+      const lastCap = lastIdx === 0 ? SUMMARY_FIRST_PAGE_UNITS : SUMMARY_CONT_PAGE_UNITS;
+      const lastUnits = chunks[lastIdx].reduce((sum, row) => sum + estimateSummaryRowUnits(row), 0);
+      const reserve = SUMMARY_LAST_PAGE_RESERVE + estimateBankUnits(bankDetails);
+      if (lastUnits > Math.max(1, lastCap - reserve)) chunks.push([]);
+      return chunks;
+    };
+
+    const paginateLogRows = (rows) => {
+      const chunks = chunkRowsByUnits(rows, LOG_FIRST_PAGE_ROWS, LOG_CONT_PAGE_ROWS, () => 1);
+      const lastIdx = chunks.length - 1;
+      const lastCap = lastIdx === 0 ? LOG_FIRST_PAGE_ROWS : LOG_CONT_PAGE_ROWS;
+      if (chunks[lastIdx].length > Math.max(1, lastCap - LOG_LAST_PAGE_RESERVE)) chunks.push([]);
+      return chunks;
+    };
+
     const periodFromFilename = (name) => {
       const m = name.match(/(\\d{2})_(\\d{2})_(\\d{4})-(\\d{2})_(\\d{2})_(\\d{4})/);
       if (!m) return "";
@@ -143,13 +207,15 @@ const HTML = `<!DOCTYPE html>
       return { lines, rate: lines[0]?.rate || 0 };
     }
 
-    /* ── Print CSS — content flows naturally, browser paginates ── */
+    /* ── Print CSS — explicit page blocks with bottom-anchored footers ── */
     const PRINT_CSS = [
       "*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }",
       "@page { size: A4 portrait; margin: 15mm 18mm; }",
       "html, body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
-      ".print-section { padding: 0; }",
-      ".print-section-break { page-break-before: always; }",
+      ".print-sheet { background: #fff; }",
+      ".print-page { display: flex; flex-direction: column; min-height: calc(297mm - 30mm) !important; margin-bottom: 0 !important; page-break-after: always; break-after: page; break-inside: avoid; }",
+      ".print-page:last-child { page-break-after: auto; break-after: auto; }",
+      ".print-page-body { flex: 1; display: flex; flex-direction: column; }",
       "table { width: 100%; border-collapse: collapse; }",
       "thead { display: table-header-group; }",
       "tr { page-break-inside: avoid; }",
@@ -230,10 +296,13 @@ const HTML = `<!DOCTYPE html>
         const t = setTimeout(measure, 50);
         window.addEventListener("resize", measure);
         return () => { clearTimeout(t); window.removeEventListener("resize", measure); };
-      }, [view, data, bankDetails]);
+      }, [view, data, bankDetails, company, period, name, email]);
 
       const totalHours = data?.lines.reduce((s, l) => s + l.hours, 0) || 0;
       const totalAmount = data?.lines.reduce((s, l) => s + l.amount, 0) || 0;
+      const summaryChunks = data ? paginateSummaryRows(data.lines, bankDetails) : [];
+      const logChunks = data ? paginateLogRows(data.lines) : [];
+      const totalPages = summaryChunks.length + logChunks.length;
 
       const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 16, fontFamily: "'Inter', sans-serif", color: DARK, background: "#fff", outline: "none", boxSizing: "border-box" };
       const labelStyle = { display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#64748b", marginBottom: 6 };
@@ -324,8 +393,8 @@ const HTML = `<!DOCTYPE html>
         );
       }
 
-      /* ── PREVIEW — content flows naturally, no fixed page heights ── */
-      const sectionHead = (title, subtitle) => (
+      /* ── PREVIEW — explicit page blocks ── */
+      const sectionHead = (subtitle) => (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: subtitle ? 32 : 40, paddingBottom: subtitle ? 20 : 24, borderBottom: (subtitle ? "2px" : "3px") + " solid " + TEAL }}>
           <div>
             {subtitle
@@ -337,6 +406,21 @@ const HTML = `<!DOCTYPE html>
         </div>
       );
 
+      const pageStyle = {
+        minHeight: PAGE_PREVIEW_HEIGHT,
+        background: "#fff",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+        fontFamily: "'Inter', sans-serif",
+        color: DARK,
+        display: "flex",
+        flexDirection: "column",
+        padding: "40px 48px",
+        marginBottom: 24,
+      };
+
+      const pageBodyStyle = { flex: 1, display: "flex", flexDirection: "column" };
+      const pageFooterStyle = { marginTop: "auto", paddingTop: 20, borderTop: "1px solid #e2e8f0" };
+
       return (
         <div data-view="preview" style={{ minHeight: "100vh", fontFamily: "'Inter', sans-serif", background: "#f1f5f9", padding: "32px 24px" }}>
           <div style={{ maxWidth: DESIGN_WIDTH, margin: "0 auto" }}>
@@ -347,86 +431,113 @@ const HTML = `<!DOCTYPE html>
 
             <div ref={previewWrapRef} style={{ overflow: "hidden", borderRadius: 4, height: previewScale < 1 ? contentHeight : "auto" }}>
               <div ref={innerRef} style={{ width: DESIGN_WIDTH, transform: previewScale < 1 ? "scale(" + previewScale + ")" : "none", transformOrigin: "top left" }}>
-                <div ref={sheetRef} style={{ background: "#fff", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", fontFamily: "'Inter', sans-serif", color: DARK }}>
+                <div ref={sheetRef} className="print-sheet" style={{ fontFamily: "'Inter', sans-serif", color: DARK }}>
+                  {summaryChunks.map((rows, chunkIndex) => {
+                    const isFirst = chunkIndex === 0;
+                    const isLast = chunkIndex === summaryChunks.length - 1;
+                    const pageNumber = chunkIndex + 1;
+                    return (
+                      <div key={"summary-" + chunkIndex} className={"print-page" + (chunkIndex > 0 ? " print-section-break" : "")} style={pageStyle}>
+                        <div className="print-page-body" style={pageBodyStyle}>
+                          {sectionHead(isFirst ? null : "Timesheet (continued)")}
 
-                  {/* ── SECTION 1: TIMESHEET ── */}
-                  <div className="print-section" style={{ padding: "40px 48px" }}>
-                    {sectionHead()}
+                          {isFirst && (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 36 }}>
+                              <div>
+                                <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>Company</h3>
+                                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#334155" }}><strong style={{ color: DARK, fontWeight: 600 }}>{company || "Company Name"}</strong></p>
+                              </div>
+                              <div>
+                                <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>Details</h3>
+                                {[["Period", period || "—"], ["Date Submitted", fmtDate(new Date())], ["Days Worked", "" + data.lines.length], ["Hourly Rate", fmt(data.rate)]].map(([k, v]) => (
+                                  <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontSize: 13, color: "#334155" }}>
+                                    <span>{k}</span><strong style={{ color: DARK, whiteSpace: "nowrap" }}>{v}</strong>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 36 }}>
-                      <div>
-                        <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>Company</h3>
-                        <p style={{ fontSize: 13, lineHeight: 1.7, color: "#334155" }}><strong style={{ color: DARK, fontWeight: 600 }}>{company || "Company Name"}</strong></p>
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>Details</h3>
-                        {[["Period", period || "—"], ["Date Submitted", fmtDate(new Date())], ["Days Worked", "" + data.lines.length], ["Hourly Rate", fmt(data.rate)]].map(([k, v]) => (
-                          <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontSize: 13, color: "#334155" }}>
-                            <span>{k}</span><strong style={{ color: DARK, whiteSpace: "nowrap" }}>{v}</strong>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: isLast ? 24 : 0 }}>
+                            <thead><tr><th style={thBase}>Date</th><th style={thBase}>Tasks</th><th style={thR}>Hours</th><th style={thR}>Amount</th></tr></thead>
+                            <tbody>
+                              {rows.map((l, i) => {
+                                const bb = i === rows.length - 1 ? "2px solid #e2e8f0" : "1px solid #f1f5f9";
+                                const td = { padding: "14px 16px", fontSize: 13, color: "#334155", borderBottom: bb };
+                                const tdR = { ...td, textAlign: "right", whiteSpace: "nowrap" };
+                                return (<tr key={i}><td style={{ ...td, whiteSpace: "nowrap" }}>{fmtDate(l.date)}</td><td style={{ ...td, maxWidth: 320 }}><TaskPills desc={l.description} /></td><td style={tdR}>{l.hours.toFixed(2)}</td><td style={{ ...tdR, fontWeight: 500 }}>{fmt(l.amount)}</td></tr>);
+                              })}
+                            </tbody>
+                          </table>
 
-                    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 32 }}>
-                      <thead><tr><th style={thBase}>Date</th><th style={thBase}>Tasks</th><th style={thR}>Hours</th><th style={thR}>Amount</th></tr></thead>
-                      <tbody>
-                        {data.lines.map((l, i) => {
-                          const bb = i === data.lines.length - 1 ? "2px solid #e2e8f0" : "1px solid #f1f5f9";
-                          const td = { padding: "14px 16px", fontSize: 13, color: "#334155", borderBottom: bb };
-                          const tdR = { ...td, textAlign: "right", whiteSpace: "nowrap" };
-                          return (<tr key={i}><td style={{ ...td, whiteSpace: "nowrap" }}>{fmtDate(l.date)}</td><td style={{ ...td, maxWidth: 320 }}><TaskPills desc={l.description} /></td><td style={tdR}>{l.hours.toFixed(2)}</td><td style={{ ...tdR, fontWeight: 500 }}>{fmt(l.amount)}</td></tr>);
-                        })}
-                      </tbody>
-                    </table>
+                          {isLast && (
+                            <>
+                              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: bankDetails ? 24 : 0 }}>
+                                <div style={{ width: 280 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13, color: "#64748b" }}>
+                                    <span>Total Hours</span><span style={{ color: "#334155", whiteSpace: "nowrap" }}>{totalHours.toFixed(2)}</span>
+                                  </div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 8px", fontSize: 20, fontWeight: 700, color: DARK, borderTop: "3px solid " + TEAL, marginTop: 8 }}>
+                                    <span>Total Due</span><span style={{ whiteSpace: "nowrap" }}>{fmt(totalAmount)}</span>
+                                  </div>
+                                </div>
+                              </div>
 
-                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 32 }}>
-                      <div style={{ width: 280 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13, color: "#64748b" }}>
-                          <span>Total Hours</span><span style={{ color: "#334155", whiteSpace: "nowrap" }}>{totalHours.toFixed(2)}</span>
+                              {bankDetails && (
+                                <div style={{ padding: 20, background: "#f0fafb", borderRadius: 8, borderLeft: "3px solid " + TEAL }}>
+                                  <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TEAL, marginBottom: 10, fontWeight: 700 }}>Banking Details</h3>
+                                  <p style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-line", lineHeight: 1.7 }}>{bankDetails}</p>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 8px", fontSize: 20, fontWeight: 700, color: DARK, borderTop: "3px solid " + TEAL, marginTop: 8 }}>
-                          <span>Total Due</span><span style={{ whiteSpace: "nowrap" }}>{fmt(totalAmount)}</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    {bankDetails && (
-                      <div style={{ marginBottom: 32, padding: 20, background: "#f0fafb", borderRadius: 8, borderLeft: "3px solid " + TEAL }}>
-                        <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TEAL, marginBottom: 10, fontWeight: 700 }}>Banking Details</h3>
-                        <p style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-line", lineHeight: 1.7 }}>{bankDetails}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ── SECTION 2: TIME LOG (forces new page in print) ── */}
-                  <div className="print-section print-section-break" style={{ padding: "40px 48px", borderTop: "1px solid #e2e8f0" }}>
-                    {sectionHead(null, "Appendix: Time Log")}
-
-                    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 32 }}>
-                      <thead><tr><th style={thBase}>Date</th><th style={thBase}>Start Time</th><th style={thBase}>End Time</th><th style={thR}>Duration</th></tr></thead>
-                      <tbody>
-                        {data.lines.map((l, i) => {
-                          const bb = i === data.lines.length - 1 ? "2px solid #e2e8f0" : "1px solid #f1f5f9";
-                          const td = { padding: "14px 16px", fontSize: 13, color: "#334155", borderBottom: bb };
-                          const tdR = { ...td, textAlign: "right", whiteSpace: "nowrap" };
-                          return (<tr key={i}><td style={{ ...td, whiteSpace: "nowrap" }}>{fmtDate(l.date)}</td><td style={td}>{fmtTime(l.startTime)}</td><td style={td}>{fmtTime(l.endTime)}</td><td style={tdR}>{l.hours.toFixed(2)}h</td></tr>);
-                        })}
-                      </tbody>
-                    </table>
-
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <div style={{ width: 220 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 8px", fontSize: 16, fontWeight: 700, color: DARK, borderTop: "3px solid " + TEAL }}>
-                          <span>Total Hours</span><span>{totalHours.toFixed(2)}</span>
+                        <div style={pageFooterStyle}>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"} · Page {pageNumber} of {totalPages}</p>
                         </div>
                       </div>
-                    </div>
+                    );
+                  })}
 
-                    <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid #e2e8f0" }}>
-                      <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"}</p>
-                    </div>
-                  </div>
+                  {logChunks.map((rows, chunkIndex) => {
+                    const isFirst = chunkIndex === 0;
+                    const isLast = chunkIndex === logChunks.length - 1;
+                    const pageNumber = summaryChunks.length + chunkIndex + 1;
+                    return (
+                      <div key={"log-" + chunkIndex} className={"print-page" + (isFirst ? " print-section-break" : "")} style={pageStyle}>
+                        <div className="print-page-body" style={pageBodyStyle}>
+                          {sectionHead(isFirst ? "Appendix: Time Log" : "Appendix: Time Log (continued)")}
+
+                          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: isLast ? 24 : 0 }}>
+                            <thead><tr><th style={thBase}>Date</th><th style={thBase}>Start Time</th><th style={thBase}>End Time</th><th style={thR}>Duration</th></tr></thead>
+                            <tbody>
+                              {rows.map((l, i) => {
+                                const bb = i === rows.length - 1 ? "2px solid #e2e8f0" : "1px solid #f1f5f9";
+                                const td = { padding: "14px 16px", fontSize: 13, color: "#334155", borderBottom: bb };
+                                const tdR = { ...td, textAlign: "right", whiteSpace: "nowrap" };
+                                return (<tr key={i}><td style={{ ...td, whiteSpace: "nowrap" }}>{fmtDate(l.date)}</td><td style={td}>{fmtTime(l.startTime)}</td><td style={td}>{fmtTime(l.endTime)}</td><td style={tdR}>{l.hours.toFixed(2)}h</td></tr>);
+                              })}
+                            </tbody>
+                          </table>
+
+                          {isLast && (
+                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                              <div style={{ width: 220 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 8px", fontSize: 16, fontWeight: 700, color: DARK, borderTop: "3px solid " + TEAL }}>
+                                  <span>Total Hours</span><span>{totalHours.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={pageFooterStyle}>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"} · Page {pageNumber} of {totalPages}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
