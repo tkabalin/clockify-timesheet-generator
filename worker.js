@@ -227,7 +227,17 @@ const HTML = `<!DOCTYPE html>
       ".pill { display: inline-block; background: #e6f4f5; color: #00727d; font-size: 8pt; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-right: 4px; margin-bottom: 2px; white-space: nowrap; }",
     ].join("\\n");
 
-    const savePDF = (ref) => {
+    const toFiniteNumber = (value) => {
+      const n = Number.parseFloat(value);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const parseMoney = (value) => {
+      const clean = (value ?? "0").toString().replace(/[^0-9.]/g, "");
+      return toFiniteNumber(clean);
+    };
+
+    const savePDF = (ref, setNotice) => {
       const el = ref.current;
       if (!el) return;
       const html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
@@ -237,8 +247,20 @@ const HTML = `<!DOCTYPE html>
       const blob = new Blob([html], { type: "text/html" });
       const url = URL.createObjectURL(blob);
       const win = window.open(url, "_blank");
-      if (win) { setTimeout(() => { try { win.print(); } catch(e) {} }, 900); }
-      else { const link = document.createElement("a"); link.href = url; link.download = "timesheet.html"; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+      if (win) {
+        if (setNotice) setNotice("");
+        setTimeout(() => { try { win.print(); } catch(e) {} }, 900);
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "timesheet.html";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        if (setNotice) {
+          setNotice("Pop-up blocked. Downloaded HTML instead — open it and print from your browser.");
+        }
+      }
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     };
 
@@ -246,9 +268,9 @@ const HTML = `<!DOCTYPE html>
       const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
       return data.map((r) => ({
         date: r["Start Date"] || "", description: r["Description"] || r["Task"] || "Development work",
-        hours: parseFloat(r["Duration (decimal)"] || 0), duration: r["Duration (h)"] || "",
-        rate: parseFloat((r["Billable Rate (R)"] || r["Billable Rate"] || "0").toString().replace(/[^0-9.]/g, "")),
-        amount: parseFloat((r["Billable Amount (R)"] || r["Billable Amount"] || "0").toString().replace(/[^0-9.]/g, "")),
+        hours: toFiniteNumber(r["Duration (decimal)"] || 0), duration: r["Duration (h)"] || "",
+        rate: parseMoney(r["Billable Rate (R)"] || r["Billable Rate"] || "0"),
+        amount: parseMoney(r["Billable Amount (R)"] || r["Billable Amount"] || "0"),
         user: r["User"] || "", email: r["Email"] || "", startTime: r["Start Time"] || "", endTime: r["End Time"] || "",
       })).filter((r) => r.hours > 0);
     }
@@ -261,6 +283,7 @@ const HTML = `<!DOCTYPE html>
       const [period, setPeriod] = useState("");
       const [bankDetails, setBankDetails] = useState("");
       const [view, setView] = useState("upload");
+      const [notice, setNotice] = useState("");
       const [previewScale, setPreviewScale] = useState(1);
       const [contentHeight, setContentHeight] = useState(2244);
       const sheetRef = useRef(null);
@@ -273,10 +296,17 @@ const HTML = `<!DOCTYPE html>
         const reader = new FileReader();
         reader.onload = (ev) => {
           const lines = parseClockifyCSV(ev.target.result);
-          if (!lines.length) return;
+          if (!lines.length) {
+            setNotice("No valid billable entries were found in this CSV. Please export a Clockify Detailed report with billable hours.");
+            return;
+          }
+          setNotice("");
           setData(buildData(lines));
           setName(lines[0].user); setEmail(lines[0].email);
           setPeriod(periodFromFilename(file.name)); setView("edit");
+        };
+        reader.onerror = () => {
+          setNotice("Could not read the selected file. Please try again with a valid CSV export.");
         };
         reader.readAsText(file);
       }, []);
@@ -317,6 +347,11 @@ const HTML = `<!DOCTYPE html>
             <div data-upload-inner style={{ textAlign: "center", maxWidth: 520, padding: 48 }}>
               <h1 data-upload-title style={{ fontSize: 30, fontWeight: 700, color: DARK, marginBottom: 8 }}>Timesheet Generator</h1>
               <p style={{ color: "#64748b", fontSize: 15, marginBottom: 40 }}>Import your Clockify CSV export to generate a timesheet</p>
+              {notice && (
+                <p style={{ color: "#b45309", fontSize: 13, marginBottom: 20, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+                  {notice}
+                </p>
+              )}
               <label data-upload-box style={{ display: "block", border: "2px dashed #cbd5e1", borderRadius: 16, padding: "64px 40px", cursor: "pointer", background: "#fff", transition: "all 0.2s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = "#f0fafb"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; }}
@@ -354,6 +389,11 @@ const HTML = `<!DOCTYPE html>
                   </button>
                 </div>
               </div>
+              {notice && (
+                <p style={{ color: "#b45309", fontSize: 13, marginBottom: 20, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+                  {notice}
+                </p>
+              )}
 
               <div data-section style={sectionStyle}>
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 20 }}>Employee Details</h2>
@@ -426,8 +466,13 @@ const HTML = `<!DOCTYPE html>
           <div style={{ maxWidth: DESIGN_WIDTH, margin: "0 auto" }}>
             <div data-preview-btns className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
               <button onClick={() => setView("edit")} style={{ ...btnBase, background: "#e2e8f0", color: "#334155", padding: "10px 24px", fontWeight: 500 }}>← Edit</button>
-              <button onClick={() => savePDF(sheetRef)} style={{ ...btnBase, background: TEAL, color: "#fff", padding: "10px 28px" }}>Save as PDF ↓</button>
+              <button onClick={() => savePDF(sheetRef, setNotice)} style={{ ...btnBase, background: TEAL, color: "#fff", padding: "10px 28px" }}>Save as PDF ↓</button>
             </div>
+            {notice && (
+              <p className="no-print" style={{ color: "#b45309", fontSize: 13, marginBottom: 12, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+                {notice}
+              </p>
+            )}
 
             <div ref={previewWrapRef} style={{ overflow: "hidden", borderRadius: 4, height: previewScale < 1 ? contentHeight : "auto" }}>
               <div ref={innerRef} style={{ width: DESIGN_WIDTH, transform: previewScale < 1 ? "scale(" + previewScale + ")" : "none", transformOrigin: "top left" }}>
