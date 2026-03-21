@@ -180,7 +180,7 @@ const HTML = `<!DOCTYPE html>
       const lastCap = lastIdx === 0 ? SUMMARY_FIRST_PAGE_UNITS : SUMMARY_CONT_PAGE_UNITS;
       const lastUnits = chunks[lastIdx].reduce((sum, row) => sum + estimateSummaryRowUnits(row), 0);
       const reserve = SUMMARY_LAST_PAGE_RESERVE + estimateBankUnits(bankDetails);
-      if (lastUnits > Math.max(1, lastCap - reserve)) chunks.push([]);
+      if (lastUnits + reserve > lastCap) chunks.push([]);
       return chunks;
     };
 
