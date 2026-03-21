@@ -179,8 +179,8 @@ const HTML = `<!DOCTYPE html>
       const lastIdx = chunks.length - 1;
       const lastCap = lastIdx === 0 ? SUMMARY_FIRST_PAGE_UNITS : SUMMARY_CONT_PAGE_UNITS;
       const lastUnits = chunks[lastIdx].reduce((sum, row) => sum + estimateSummaryRowUnits(row), 0);
-      const reserve = SUMMARY_LAST_PAGE_RESERVE + estimateBankUnits(bankDetails);
-      if (lastUnits + reserve > lastCap) chunks.push([]);
+      const bankUnits = estimateBankUnits(bankDetails);
+      if (bankUnits > 0 && lastUnits + bankUnits > lastCap) chunks.push([]);
       return chunks;
     };
 
