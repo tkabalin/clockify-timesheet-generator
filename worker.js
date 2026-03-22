@@ -359,7 +359,7 @@ const HTML = `<!DOCTYPE html>
       const sectionStyle = { background: "#fff", borderRadius: 12, padding: 28, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" };
       const thBase = { fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", fontWeight: 700, padding: "12px 16px", textAlign: "left", borderBottom: "2px solid #e2e8f0" };
       const thR = { ...thBase, textAlign: "right" };
-      const btnBase = { border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", minHeight: 44 };
+      const btnBase = { border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", minHeight: "44px" };
 
       if (view === "upload") {
         return (
