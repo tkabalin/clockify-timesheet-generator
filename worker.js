@@ -233,8 +233,9 @@ const HTML = `<!DOCTYPE html>
       "@page { size: A4 portrait; margin: 15mm 18mm; }",
       "html, body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
       ".print-sheet { background: #fff; }",
-      ".print-page { min-height: calc(297mm - 30mm) !important; margin-bottom: 0 !important; page-break-after: always; break-after: page; break-inside: avoid; position: relative; }",
+      ".print-page { min-height: calc(297mm - 30mm) !important; margin-bottom: 0 !important; page-break-after: always; break-after: page; break-inside: avoid; position: relative; padding: 40px 48px !important; }",
       ".print-page:last-child { page-break-after: auto; break-after: auto; }",
+      ".print-footer { position: absolute !important; bottom: 40px !important; left: 48px !important; right: 48px !important; }",
       "table { width: 100%; border-collapse: collapse; }",
       "thead { display: table-header-group; }",
       "tr { page-break-inside: avoid; }",
@@ -472,10 +473,14 @@ const HTML = `<!DOCTYPE html>
         color: DARK,
         position: "relative",
         padding: "40px 48px",
-        marginBottom: 32,
       };
 
-      const pageFooterStyle = { position: "absolute", bottom: 40, left: 48, right: 48, paddingTop: 20, borderTop: "1px solid #e2e8f0" };
+      const pageStyleCont = {
+        ...pageStyle,
+        borderTop: "1px solid #e2e8f0",
+      };
+
+      const pageFooterStyle = { position: "absolute", bottom: 40, left: 48, right: 48, display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 20, borderTop: "1px solid #e2e8f0" };
 
       return (
         <div data-view="preview" style={{ minHeight: "100vh", fontFamily: "'Inter', sans-serif", background: "#f1f5f9", padding: "32px 24px" }}>
@@ -498,7 +503,7 @@ const HTML = `<!DOCTYPE html>
                     const isLast = chunkIndex === summaryChunks.length - 1;
                     const pageNumber = chunkIndex + 1;
                     return (
-                      <div key={"summary-" + chunkIndex} className={"print-page" + (chunkIndex > 0 ? " print-section-break" : "")} style={pageStyle}>
+                      <div key={"summary-" + chunkIndex} className="print-page" style={isFirst ? pageStyle : pageStyleCont}>
                         {sectionHead(isFirst ? null : "Timesheet (continued)")}
 
                         {isFirst && (
@@ -552,8 +557,9 @@ const HTML = `<!DOCTYPE html>
                           </>
                         )}
 
-                        <div style={pageFooterStyle}>
-                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"} · Page {pageNumber} of {totalPages}</p>
+                        <div className="print-footer" style={pageFooterStyle}>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"}</p>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>Page {pageNumber} of {totalPages}</p>
                         </div>
                       </div>
                     );
@@ -564,7 +570,7 @@ const HTML = `<!DOCTYPE html>
                     const isLast = chunkIndex === logChunks.length - 1;
                     const pageNumber = summaryChunks.length + chunkIndex + 1;
                     return (
-                      <div key={"log-" + chunkIndex} className={"print-page" + (isFirst ? " print-section-break" : "")} style={pageStyle}>
+                      <div key={"log-" + chunkIndex} className="print-page" style={pageStyleCont}>
                         {sectionHead(isFirst ? "Appendix: Time Log" : "Appendix: Time Log (continued)")}
 
                         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: isLast ? 24 : 0 }}>
@@ -589,8 +595,9 @@ const HTML = `<!DOCTYPE html>
                           </div>
                         )}
 
-                        <div style={pageFooterStyle}>
-                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"} · Page {pageNumber} of {totalPages}</p>
+                        <div className="print-footer" style={pageFooterStyle}>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"}</p>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>Page {pageNumber} of {totalPages}</p>
                         </div>
                       </div>
                     );
