@@ -97,7 +97,7 @@ const HTML = `<!DOCTYPE html>
     const TEAL = "#00727d";
     const DARK = "#0f172a";
     const DESIGN_WIDTH = 820;
-    const PAGE_PREVIEW_HEIGHT = 1160;
+    const PAGE_PREVIEW_HEIGHT = 1122;
     const SUMMARY_FIRST_PAGE_UNITS = 14;
     const SUMMARY_CONT_PAGE_UNITS = 20;
     const SUMMARY_LAST_PAGE_RESERVE = 1;
@@ -230,15 +230,14 @@ const HTML = `<!DOCTYPE html>
     /* ── Print CSS — explicit page blocks with bottom-anchored footers ── */
     const PRINT_CSS = [
       "*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }",
-      "@page { size: A4 portrait; margin: 15mm 18mm; }",
+      "@page { size: A4; margin: 0; }",
       "html, body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
       ".print-sheet { background: #fff; }",
-      ".print-page { min-height: calc(297mm - 30mm) !important; margin-bottom: 0 !important; page-break-after: always; break-after: page; break-inside: avoid; position: relative; padding: 40px 48px !important; }",
+      ".print-page { min-height: 297mm; page-break-after: always; break-after: page; break-inside: avoid; page-break-inside: avoid; position: relative; }",
       ".print-page:last-child { page-break-after: auto; break-after: auto; }",
-      ".print-footer { position: absolute !important; bottom: 40px !important; left: 48px !important; right: 48px !important; }",
+      ".print-page table, .print-page thead, .print-page tbody, .print-page tr { break-inside: avoid; page-break-inside: avoid; }",
       "table { width: 100%; border-collapse: collapse; }",
       "thead { display: table-header-group; }",
-      "tr { page-break-inside: avoid; }",
       "th { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.2px; color: #94a3b8; font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }",
       "th.r { text-align: right; }",
       "td { padding: 10px 12px; font-size: 10pt; color: #334155; border-bottom: 1px solid #f1f5f9; }",
@@ -359,7 +358,7 @@ const HTML = `<!DOCTYPE html>
       const sectionStyle = { background: "#fff", borderRadius: 12, padding: 28, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" };
       const thBase = { fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", fontWeight: 700, padding: "12px 16px", textAlign: "left", borderBottom: "2px solid #e2e8f0" };
       const thR = { ...thBase, textAlign: "right" };
-      const btnBase = { border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", minHeight: "44px" };
+      const btnBase = { border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" };
 
       if (view === "upload") {
         return (
