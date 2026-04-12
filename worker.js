@@ -1,11 +1,11 @@
 // Cloudflare Worker — Timesheet Generator
 
 const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="256" height="256">
-  <rect width="100" height="100" rx="25" fill="#007074" />
+  <rect width="100" height="100" rx="25" fill="#00727D" />
   
   <circle cx="50" cy="50" r="32" fill="#ffffff" />
   
-  <path d="M 50 30 L 50 50 L 62 50" stroke="#007074" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <path d="M 50 30 L 50 50 L 62 50" stroke="#00727D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
 </svg>`;
 
 export default {
@@ -36,9 +36,32 @@ const HTML = `<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #0f172a; }
+    :root {
+      --brand-teal: #00727D;
+      --brand-teal-hover: #005F69;
+      --brand-teal-dark: #0F4C52;
+      --brand-teal-surface: #F0FAFB;
+      --brand-ink: #0F172A;
+
+      --text-primary: var(--brand-ink);
+      --text-secondary: #334155;
+      --text-subtle: #64748B;
+      --text-tertiary: #94A3B8;
+
+      --surface-1: #FFFFFF;
+      --surface-2: #F8FAFC;
+      --surface-3: #F1F5F9;
+      --surface-button-secondary: #E2E8F0;
+
+      --border-default: #E2E8F0;
+
+      --color-warning-bg: #FFFBEB;
+      --color-warning-border: #FDE68A;
+      --color-warning-text: #B45309;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--surface-3); color: var(--text-primary); }
     @media print {
-      body { background: #fff; }
+      body { background: var(--surface-1); }
       .no-print { display: none !important; }
       .print-page {
         break-after: page;
@@ -94,8 +117,28 @@ const HTML = `<!DOCTYPE html>
   <script type="text/babel" data-type="module">
     const { useState, useRef, useCallback, useEffect } = React;
 
-    const TEAL = "#00727d";
-    const DARK = "#0f172a";
+    const TOKENS = {
+      brandTeal: "#00727D",
+      brandTealHover: "#005F69",
+      brandTealDark: "#0F4C52",
+      brandTealSurface: "#F0FAFB",
+      textPrimary: "#0F172A",
+      textSecondary: "#334155",
+      textSubtle: "#64748B",
+      textTertiary: "#94A3B8",
+      surface1: "#FFFFFF",
+      surface2: "#F8FAFC",
+      surface3: "#F1F5F9",
+      surfaceButtonSecondary: "#E2E8F0",
+      borderDefault: "#E2E8F0",
+      warningBg: "#FFFBEB",
+      warningBorder: "#FDE68A",
+      warningText: "#B45309",
+      shadowSoft: "rgba(15, 23, 42, 0.06)",
+      shadowStrong: "rgba(15, 23, 42, 0.15)",
+    };
+    const TEAL = TOKENS.brandTeal;
+    const DARK = TOKENS.textPrimary;
     const DESIGN_WIDTH = 820;
     const PAGE_PREVIEW_HEIGHT = 1122;
     const SUMMARY_FIRST_PAGE_UNITS = 14;
@@ -148,7 +191,7 @@ const HTML = `<!DOCTYPE html>
     };
 
     const parseTasks = (s) => (s || "").split(",").map((t) => t.trim()).filter(Boolean);
-    const pillStyle = { display: "inline-block", background: "#e6f4f5", color: TEAL, fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 99, marginRight: 5, marginBottom: 3, whiteSpace: "nowrap" };
+    const pillStyle = { display: "inline-block", background: TOKENS.brandTealSurface, color: TEAL, fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 99, marginRight: 5, marginBottom: 3, whiteSpace: "nowrap" };
     const TaskPills = ({ desc }) => (
       React.createElement("span", { style: { display: "flex", flexWrap: "wrap", gap: 0 } },
         parseTasks(desc).map((task, j) =>
@@ -256,19 +299,19 @@ const HTML = `<!DOCTYPE html>
     const PRINT_CSS = [
       "*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }",
       "@page { size: A4; margin: 0; }",
-      "html, body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
-      ".print-sheet { background: #fff; }",
+      "html, body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; color: " + TOKENS.textPrimary + "; -webkit-print-color-adjust: exact; print-color-adjust: exact; }",
+      ".print-sheet { background: " + TOKENS.surface1 + "; }",
       ".print-page { min-height: 297mm; page-break-after: always; break-after: page; break-inside: avoid; page-break-inside: avoid; position: relative; }",
       ".print-page:last-child { page-break-after: auto; break-after: auto; }",
       ".print-page table, .print-page thead, .print-page tbody, .print-page tr { break-inside: avoid; page-break-inside: avoid; }",
       "table { width: 100%; border-collapse: collapse; }",
       "thead { display: table-header-group; }",
-      "th { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.2px; color: #94a3b8; font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }",
+      "th { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.2px; color: " + TOKENS.textTertiary + "; font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid " + TOKENS.borderDefault + "; }",
       "th.r { text-align: right; }",
-      "td { padding: 10px 12px; font-size: 10pt; color: #334155; border-bottom: 1px solid #f1f5f9; }",
+      "td { padding: 10px 12px; font-size: 10pt; color: " + TOKENS.textSecondary + "; border-bottom: 1px solid " + TOKENS.surface3 + "; }",
       "td.r { text-align: right; white-space: nowrap; }",
-      "tr:last-child td { border-bottom: 2px solid #e2e8f0; }",
-      ".pill { display: inline-block; background: #e6f4f5; color: #00727d; font-size: 8pt; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-right: 4px; margin-bottom: 2px; white-space: nowrap; }",
+      "tr:last-child td { border-bottom: 2px solid " + TOKENS.borderDefault + "; }",
+      ".pill { display: inline-block; background: " + TOKENS.brandTealSurface + "; color: " + TOKENS.brandTeal + "; font-size: 8pt; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-right: 4px; margin-bottom: 2px; white-space: nowrap; }",
     ].join("\\n");
 
     const toFiniteNumber = (value) => {
@@ -444,31 +487,31 @@ const HTML = `<!DOCTYPE html>
       const logChunks = hasTimes ? paginateLogRows(data.lines) : [];
       const totalPages = summaryChunks.length + logChunks.length;
 
-      const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 16, fontFamily: "'Inter', sans-serif", color: DARK, background: "#fff", outline: "none", boxSizing: "border-box" };
-      const entryInput = { padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "'Inter', sans-serif", color: DARK, background: "#fff", outline: "none", boxSizing: "border-box" };
-      const labelStyle = { display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#64748b", marginBottom: 6 };
-      const sectionStyle = { background: "#fff", borderRadius: 12, padding: 28, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" };
-      const thBase = { fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", fontWeight: 700, padding: "12px 16px", textAlign: "left", borderBottom: "2px solid #e2e8f0" };
+      const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid " + TOKENS.borderDefault, borderRadius: 8, fontSize: 16, fontFamily: "'Inter', sans-serif", color: DARK, background: TOKENS.surface1, outline: "none", boxSizing: "border-box" };
+      const entryInput = { padding: "8px 10px", border: "1px solid " + TOKENS.borderDefault, borderRadius: 8, fontSize: 14, fontFamily: "'Inter', sans-serif", color: DARK, background: TOKENS.surface1, outline: "none", boxSizing: "border-box" };
+      const labelStyle = { display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: TOKENS.textSubtle, marginBottom: 6 };
+      const sectionStyle = { background: TOKENS.surface1, borderRadius: 12, padding: 28, marginBottom: 20, boxShadow: "0 1px 3px " + TOKENS.shadowSoft };
+      const thBase = { fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TOKENS.textTertiary, fontWeight: 700, padding: "12px 16px", textAlign: "left", borderBottom: "2px solid " + TOKENS.borderDefault };
       const thR = { ...thBase, textAlign: "right" };
       const btnBase = { border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" };
 
       if (view === "upload") {
         return (
-          <div data-view="upload" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f1f5f9", padding: "32px 24px" }}>
+          <div data-view="upload" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: TOKENS.surface3, padding: "32px 24px" }}>
             <div data-upload-inner style={{ textAlign: "center", maxWidth: 520, padding: 48 }}>
               <h1 data-upload-title style={{ fontSize: 30, fontWeight: 700, color: DARK, marginBottom: 8 }}>Timesheet Generator</h1>
-              <p style={{ color: "#64748b", fontSize: 15, marginBottom: 40 }}>Import your Clockify CSV export, or build a timesheet by hand</p>
+              <p style={{ color: TOKENS.textSubtle, fontSize: 15, marginBottom: 40 }}>Import your Clockify CSV export, or build a timesheet by hand</p>
               {notice && (
-                <p style={{ color: "#b45309", fontSize: 13, marginBottom: 20, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+                <p style={{ color: TOKENS.warningText, fontSize: 13, marginBottom: 20, background: TOKENS.warningBg, border: "1px solid " + TOKENS.warningBorder, borderRadius: 8, padding: "10px 12px" }}>
                   {notice}
                 </p>
               )}
-              <label data-upload-box style={{ display: "block", border: "2px dashed #cbd5e1", borderRadius: 16, padding: "64px 40px", cursor: "pointer", background: "#fff", transition: "all 0.2s" }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = "#f0fafb"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; }}
-                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = "#f0fafb"; }}
-                onDragLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; }}
-                onDrop={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; handleCsvDrop(e); }}
+              <label data-upload-box style={{ display: "block", border: "2px dashed " + TOKENS.borderDefault, borderRadius: 16, padding: "64px 40px", cursor: "pointer", background: TOKENS.surface1, transition: "all 0.2s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = TOKENS.brandTealSurface; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = TOKENS.borderDefault; e.currentTarget.style.background = TOKENS.surface1; }}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = TOKENS.brandTealSurface; }}
+                onDragLeave={(e) => { e.currentTarget.style.borderColor = TOKENS.borderDefault; e.currentTarget.style.background = TOKENS.surface1; }}
+                onDrop={(e) => { e.currentTarget.style.borderColor = TOKENS.borderDefault; e.currentTarget.style.background = TOKENS.surface1; handleCsvDrop(e); }}
               >
                 <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
@@ -476,7 +519,7 @@ const HTML = `<!DOCTYPE html>
                   </svg>
                 </div>
                 <p style={{ color: DARK, fontSize: 15, fontWeight: 600 }}>Choose a Clockify CSV file, or drop it here</p>
-                <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed or Summary → Export → CSV</p>
+                <p style={{ color: TOKENS.textTertiary, fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed or Summary → Export → CSV</p>
                 <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0", color: "#94a3b8", fontSize: 13 }}>
@@ -492,29 +535,29 @@ const HTML = `<!DOCTYPE html>
 
       if (view === "edit") {
         return (
-          <div data-view="edit" style={{ minHeight: "100vh", fontFamily: "'Inter', sans-serif", background: "#f1f5f9", padding: "32px 24px" }}>
+          <div data-view="edit" style={{ minHeight: "100vh", fontFamily: "'Inter', sans-serif", background: TOKENS.surface3, padding: "32px 24px" }}>
             <div style={{ maxWidth: 640, margin: "0 auto" }}>
               <div data-header-row style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
                 <div>
                   <h1 style={{ fontSize: 26, fontWeight: 700, color: DARK }}>Timesheet</h1>
-                  <p style={{ color: "#64748b", fontSize: 14, marginTop: 4 }}>{data.lines.length} entries, {totalHours.toFixed(1)} hours</p>
+                  <p style={{ color: TOKENS.textSubtle, fontSize: 14, marginTop: 4 }}>{data.lines.length} entries, {totalHours.toFixed(1)} hours</p>
                 </div>
                 <div data-btn-row style={{ display: "flex", gap: 8 }}>
                   <label
                     onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = "#cbeaf0"; }}
-                    onDragLeave={(e) => { e.currentTarget.style.background = "#e2e8f0"; }}
-                    onDrop={(e) => { e.currentTarget.style.background = "#e2e8f0"; handleCsvDrop(e); }}
-                    style={{ ...btnBase, background: "#e2e8f0", color: "#334155", padding: "10px 18px", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    onDragLeave={(e) => { e.currentTarget.style.background = TOKENS.surfaceButtonSecondary; }}
+                    onDrop={(e) => { e.currentTarget.style.background = TOKENS.surfaceButtonSecondary; handleCsvDrop(e); }}
+                    style={{ ...btnBase, background: TOKENS.surfaceButtonSecondary, color: TOKENS.textSecondary, padding: "10px 18px", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     Import Clockify CSV
                     <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
                   </label>
-                  <button onClick={goPreview} style={{ ...btnBase, background: TEAL, color: "#fff", padding: "10px 24px" }}>
+                  <button onClick={goPreview} style={{ ...btnBase, background: TEAL, color: TOKENS.surface1, padding: "10px 24px" }}>
                     Preview →
                   </button>
                 </div>
               </div>
               {notice && (
-                <p style={{ color: "#b45309", fontSize: 13, marginBottom: 20, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+                <p style={{ color: TOKENS.warningText, fontSize: 13, marginBottom: 20, background: TOKENS.warningBg, border: "1px solid " + TOKENS.warningBorder, borderRadius: 8, padding: "10px 12px" }}>
                   {notice}
                 </p>
               )}
@@ -547,7 +590,7 @@ const HTML = `<!DOCTYPE html>
                     <div data-entry-row key={i}
                       onDragOver={(e) => { e.preventDefault(); if (dragOverIdx !== i) setDragOverIdx(i); }}
                       onDrop={(e) => { e.preventDefault(); moveLine(dragFrom.current, i); dragFrom.current = null; setDragOverIdx(null); }}
-                      style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 0", borderBottom: i < data.lines.length - 1 ? "1px solid #e2e8f0" : "none", background: dragOverIdx === i ? "#f0fafb" : "transparent", borderRadius: dragOverIdx === i ? 8 : 0 }}>
+                      style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 0", borderBottom: i < data.lines.length - 1 ? "1px solid " + TOKENS.borderDefault : "none", background: dragOverIdx === i ? TOKENS.brandTealSurface : "transparent", borderRadius: dragOverIdx === i ? 8 : 0 }}>
                       <span data-entry-grip draggable title="Drag to reorder"
                         onDragStart={(e) => { dragFrom.current = i; e.dataTransfer.effectAllowed = "move"; const row = e.currentTarget.parentNode; if (row) e.dataTransfer.setDragImage(row, 20, 20); try { e.dataTransfer.setData("text/plain", String(i)); } catch (_) {} }}
                         onDragEnd={() => { dragFrom.current = null; setDragOverIdx(null); }}
@@ -580,17 +623,17 @@ const HTML = `<!DOCTYPE html>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: subtitle ? 32 : 40, paddingBottom: subtitle ? 20 : 24, borderBottom: (subtitle ? "2px" : "3px") + " solid " + TEAL }}>
           <div>
             {subtitle
-              ? <><h2 style={{ fontSize: 22, fontWeight: 700, color: DARK, margin: 0 }}>{name || "Employee Name"}</h2><p style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{subtitle}</p></>
-              : <><h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5, color: DARK, margin: 0 }}>{name || "Employee Name"}</h1><p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{email}</p></>
+              ? <><h2 style={{ fontSize: 22, fontWeight: 700, color: DARK, margin: 0 }}>{name || "Employee Name"}</h2><p style={{ fontSize: 12, color: TOKENS.textTertiary, marginTop: 4 }}>{subtitle}</p></>
+              : <><h1 style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5, color: DARK, margin: 0 }}>{name || "Employee Name"}</h1><p style={{ fontSize: 13, color: TOKENS.textSubtle, marginTop: 4 }}>{email}</p></>
             }
           </div>
-          <div style={{ background: TEAL, color: "#fff", padding: subtitle ? "8px 20px" : "12px 28px", fontSize: subtitle ? 14 : 20, fontWeight: 700, letterSpacing: 2, flexShrink: 0 }}>TIMESHEET</div>
+          <div style={{ background: TEAL, color: TOKENS.surface1, padding: subtitle ? "8px 20px" : "12px 28px", fontSize: subtitle ? 14 : 20, fontWeight: 700, letterSpacing: 2, flexShrink: 0 }}>TIMESHEET</div>
         </div>
       );
 
       const pageStyle = {
         minHeight: PAGE_PREVIEW_HEIGHT,
-        background: "#fff",
+        background: TOKENS.surface1,
         fontFamily: "'Inter', sans-serif",
         color: DARK,
         position: "relative",
@@ -599,25 +642,25 @@ const HTML = `<!DOCTYPE html>
 
       const pageStyleCont = {
         ...pageStyle,
-        borderTop: "1px solid #e2e8f0",
+        borderTop: "1px solid " + TOKENS.borderDefault,
       };
 
-      const pageFooterStyle = { position: "absolute", bottom: 40, left: 48, right: 48, display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 20, borderTop: "1px solid #e2e8f0" };
+      const pageFooterStyle = { position: "absolute", bottom: 40, left: 48, right: 48, display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 20, borderTop: "1px solid " + TOKENS.borderDefault };
 
       return (
-        <div data-view="preview" style={{ minHeight: "100vh", fontFamily: "'Inter', sans-serif", background: "#f1f5f9", padding: "32px 24px" }}>
+        <div data-view="preview" style={{ minHeight: "100vh", fontFamily: "'Inter', sans-serif", background: TOKENS.surface3, padding: "32px 24px" }}>
           <div style={{ maxWidth: DESIGN_WIDTH, margin: "0 auto" }}>
             <div data-preview-btns className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
-              <button onClick={() => setView("edit")} style={{ ...btnBase, background: "#e2e8f0", color: "#334155", padding: "10px 24px", fontWeight: 500 }}>← Edit</button>
-              <button onClick={() => savePDF(sheetRef, setNotice)} style={{ ...btnBase, background: TEAL, color: "#fff", padding: "10px 28px" }}>Save as PDF ↓</button>
+              <button onClick={() => setView("edit")} style={{ ...btnBase, background: TOKENS.surfaceButtonSecondary, color: TOKENS.textSecondary, padding: "10px 24px", fontWeight: 500 }}>← Edit</button>
+              <button onClick={() => savePDF(sheetRef, setNotice)} style={{ ...btnBase, background: TEAL, color: TOKENS.surface1, padding: "10px 28px" }}>Save as PDF ↓</button>
             </div>
             {notice && (
-              <p className="no-print" style={{ color: "#b45309", fontSize: 13, marginBottom: 12, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
+              <p className="no-print" style={{ color: TOKENS.warningText, fontSize: 13, marginBottom: 12, background: TOKENS.warningBg, border: "1px solid " + TOKENS.warningBorder, borderRadius: 8, padding: "10px 12px" }}>
                 {notice}
               </p>
             )}
 
-            <div ref={previewWrapRef} style={{ overflow: "hidden", borderRadius: 4, boxShadow: "0 20px 60px rgba(0,0,0,0.15)", height: previewScale < 1 ? contentHeight : "auto" }}>
+            <div ref={previewWrapRef} style={{ overflow: "hidden", borderRadius: 4, boxShadow: "0 20px 60px " + TOKENS.shadowStrong, height: previewScale < 1 ? contentHeight : "auto" }}>
               <div ref={innerRef} style={{ width: DESIGN_WIDTH, transform: previewScale < 1 ? "scale(" + previewScale + ")" : "none", transformOrigin: "top left" }}>
                 <div ref={sheetRef} className="print-sheet" style={{ fontFamily: "'Inter', sans-serif", color: DARK }}>
                   {summaryChunks.map((rows, chunkIndex) => {
@@ -631,13 +674,13 @@ const HTML = `<!DOCTYPE html>
                         {isFirst && (
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 36 }}>
                             <div>
-                              <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>Company</h3>
-                              <p style={{ fontSize: 13, lineHeight: 1.7, color: "#334155" }}><strong style={{ color: DARK, fontWeight: 600 }}>{company || "Company Name"}</strong></p>
+                              <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TOKENS.textTertiary, marginBottom: 8, fontWeight: 700 }}>Company</h3>
+                              <p style={{ fontSize: 13, lineHeight: 1.7, color: TOKENS.textSecondary }}><strong style={{ color: DARK, fontWeight: 600 }}>{company || "Company Name"}</strong></p>
                             </div>
                             <div>
-                              <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", marginBottom: 8, fontWeight: 700 }}>Details</h3>
+                              <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TOKENS.textTertiary, marginBottom: 8, fontWeight: 700 }}>Details</h3>
                               {[["Period", period || "—"], ["Date Submitted", fmtDate(new Date())], ["Days Worked", "" + data.lines.length], ["Hourly Rate", fmt(data.rate)]].map(([k, v]) => (
-                                <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontSize: 13, color: "#334155" }}>
+                                <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontSize: 13, color: TOKENS.textSecondary }}>
                                   <span>{k}</span><strong style={{ color: DARK, whiteSpace: "nowrap" }}>{v}</strong>
                                 </div>
                               ))}
@@ -649,8 +692,8 @@ const HTML = `<!DOCTYPE html>
                           <thead><tr><th style={thBase}>Date</th><th style={thBase}>Tasks</th><th style={thR}>Hours</th><th style={thR}>Amount</th></tr></thead>
                           <tbody>
                             {rows.map((l, i) => {
-                              const bb = i === rows.length - 1 ? "2px solid #e2e8f0" : "1px solid #f1f5f9";
-                              const td = { padding: "14px 16px", fontSize: 13, color: "#334155", borderBottom: bb };
+                              const bb = i === rows.length - 1 ? "2px solid " + TOKENS.borderDefault : "1px solid " + TOKENS.surface3;
+                              const td = { padding: "14px 16px", fontSize: 13, color: TOKENS.textSecondary, borderBottom: bb };
                               const tdR = { ...td, textAlign: "right", whiteSpace: "nowrap" };
                               return (<tr key={i}><td style={{ ...td, whiteSpace: "nowrap" }}>{fmtDate(l.date)}</td><td style={{ ...td, maxWidth: 320 }}><TaskPills desc={l.description} /></td><td style={tdR}>{l.hours.toFixed(2)}</td><td style={{ ...tdR, fontWeight: 500 }}>{fmt(l.amount)}</td></tr>);
                             })}
@@ -661,8 +704,8 @@ const HTML = `<!DOCTYPE html>
                           <>
                             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: bankDetails ? 24 : 0 }}>
                               <div style={{ width: 280 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13, color: "#64748b" }}>
-                                  <span>Total Hours</span><span style={{ color: "#334155", whiteSpace: "nowrap" }}>{totalHours.toFixed(2)}</span>
+                                <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13, color: TOKENS.textSubtle }}>
+                                  <span>Total Hours</span><span style={{ color: TOKENS.textSecondary, whiteSpace: "nowrap" }}>{totalHours.toFixed(2)}</span>
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 8px", fontSize: 20, fontWeight: 700, color: DARK, borderTop: "3px solid " + TEAL, marginTop: 8 }}>
                                   <span>Total Due</span><span style={{ whiteSpace: "nowrap" }}>{fmt(totalAmount)}</span>
@@ -671,17 +714,20 @@ const HTML = `<!DOCTYPE html>
                             </div>
 
                             {bankDetails && (
-                              <div style={{ padding: 20, background: "#f0fafb", borderRadius: 8, borderLeft: "3px solid " + TEAL }}>
-                                <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TEAL, marginBottom: 10, fontWeight: 700 }}>Banking Details</h3>
-                                <p style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-line", lineHeight: 1.7 }}>{bankDetails}</p>
+                              <div style={{ borderRadius: 12, border: "1px solid " + TOKENS.borderDefault, background: TOKENS.surface1, overflow: "hidden", boxShadow: "0 1px 3px " + TOKENS.shadowSoft + ", 0 4px 12px " + TOKENS.shadowSoft }}>
+                                <div style={{ height: 4, width: "100%", background: TEAL }}></div>
+                                <div style={{ padding: "14px 16px 16px" }}>
+                                  <h3 style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: TEAL, marginBottom: 8, fontWeight: 700 }}>Banking Details</h3>
+                                  <p style={{ fontSize: 13, color: TOKENS.textSecondary, whiteSpace: "pre-line", lineHeight: 1.7 }}>{bankDetails}</p>
+                                </div>
                               </div>
                             )}
                           </>
                         )}
 
                         <div className="print-footer" style={pageFooterStyle}>
-                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"}</p>
-                          <p style={{ fontSize: 11, color: "#94a3b8" }}>Page {pageNumber} of {totalPages}</p>
+                          <p style={{ fontSize: 11, color: TOKENS.textTertiary }}>{name} · {period || "Timesheet"}</p>
+                          <p style={{ fontSize: 11, color: TOKENS.textTertiary }}>Page {pageNumber} of {totalPages}</p>
                         </div>
                       </div>
                     );
@@ -699,8 +745,8 @@ const HTML = `<!DOCTYPE html>
                           <thead><tr><th style={thBase}>Date</th><th style={thBase}>Start Time</th><th style={thBase}>End Time</th><th style={thR}>Duration</th></tr></thead>
                           <tbody>
                             {rows.map((l, i) => {
-                              const bb = i === rows.length - 1 ? "2px solid #e2e8f0" : "1px solid #f1f5f9";
-                              const td = { padding: "14px 16px", fontSize: 13, color: "#334155", borderBottom: bb };
+                              const bb = i === rows.length - 1 ? "2px solid " + TOKENS.borderDefault : "1px solid " + TOKENS.surface3;
+                              const td = { padding: "14px 16px", fontSize: 13, color: TOKENS.textSecondary, borderBottom: bb };
                               const tdR = { ...td, textAlign: "right", whiteSpace: "nowrap" };
                               return (<tr key={i}><td style={{ ...td, whiteSpace: "nowrap" }}>{fmtDate(l.date)}</td><td style={td}>{fmtTime(l.startTime)}</td><td style={td}>{fmtTime(l.endTime)}</td><td style={tdR}>{l.hours.toFixed(2)}h</td></tr>);
                             })}
@@ -718,8 +764,8 @@ const HTML = `<!DOCTYPE html>
                         )}
 
                         <div className="print-footer" style={pageFooterStyle}>
-                          <p style={{ fontSize: 11, color: "#94a3b8" }}>{name} · {period || "Timesheet"}</p>
-                          <p style={{ fontSize: 11, color: "#94a3b8" }}>Page {pageNumber} of {totalPages}</p>
+                          <p style={{ fontSize: 11, color: TOKENS.textTertiary }}>{name} · {period || "Timesheet"}</p>
+                          <p style={{ fontSize: 11, color: TOKENS.textTertiary }}>Page {pageNumber} of {totalPages}</p>
                         </div>
                       </div>
                     );
