@@ -142,7 +142,9 @@ const HTML = `<!DOCTYPE html>
 
     const toTitleCase = (s) => {
       if (!s) return "";
-      return s.replace(/\\w\\S*/g, (t) => t.charAt(0).toUpperCase() + t.substring(1).toLowerCase());
+      // Preserve words that already contain capitals (e.g. acronyms like "AI", "OPS"); only
+      // title-case all-lowercase words so "AI" stays "AI" rather than becoming "Ai".
+      return s.replace(/\\w\\S*/g, (t) => (/[A-Z]/.test(t.slice(1)) ? t : t.charAt(0).toUpperCase() + t.substring(1).toLowerCase()));
     };
 
     const parseTasks = (s) => (s || "").split(",").map((t) => t.trim()).filter(Boolean);
