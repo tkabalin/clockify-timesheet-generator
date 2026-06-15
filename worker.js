@@ -69,11 +69,11 @@ const HTML = `<!DOCTYPE html>
       [data-header-row] { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
       [data-btn-row] { width: 100% !important; }
       [data-btn-row] > * { flex: 1 !important; text-align: center !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-      [data-entry-row] { flex-wrap: wrap !important; gap: 4px 8px !important; }
-      [data-entry-date] { width: auto !important; flex-shrink: 0 !important; }
-      [data-entry-tasks] { flex-basis: 100% !important; order: 3 !important; }
-      [data-entry-hours] { width: auto !important; }
-      [data-entry-amount] { width: auto !important; }
+      [data-entry-row] { gap: 4px 8px !important; }
+      [data-entry-date] { flex: 1 1 110px !important; width: auto !important; }
+      [data-entry-tasks] { flex: 1 1 100% !important; width: auto !important; }
+      [data-entry-start], [data-entry-end], [data-entry-hours] { flex: 1 1 72px !important; width: auto !important; }
+      [data-entry-amount] { margin-left: auto !important; }
       [data-view="preview"] { padding: 20px 12px !important; }
       [data-preview-btns] { gap: 8px !important; }
       [data-preview-btns] button { padding: 10px 16px !important; font-size: 13px !important; }
@@ -222,9 +222,17 @@ const HTML = `<!DOCTYPE html>
       return f(m[1], m[2], m[3]) + " \\u2013 " + f(m[4], m[5], m[6]);
     };
 
+    const sortLines = (lines) => lines.slice().sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+
+    const todayISO = () => {
+      const d = new Date();
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    };
+
+    const makeEmptyEntry = () => ({ date: todayISO(), description: "", hours: 0, duration: "", rate: 0, amount: 0, user: "", email: "", startTime: "", endTime: "" });
+
     function buildData(lines) {
-      lines.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
-      return { lines, rate: lines[0]?.rate || 0 };
+      return { lines: sortLines(lines), rate: lines[0]?.rate || 0 };
     }
 
     /* ── Print CSS — explicit page blocks with bottom-anchored footers ── */
@@ -330,6 +338,45 @@ const HTML = `<!DOCTYPE html>
         reader.readAsText(file);
       }, []);
 
+      const startManual = useCallback(() => {
+        setNotice("");
+        setData({ lines: [makeEmptyEntry()], rate: 0 });
+        setName(""); setEmail(""); setCompany(""); setPeriod(""); setBankDetails("");
+        setView("edit");
+      }, []);
+
+      const updateLine = useCallback((index, field, value) => {
+        setData((prev) => ({ ...prev, lines: prev.lines.map((l, i) => {
+          if (i !== index) return l;
+          const next = { ...l, [field]: value };
+          if (field === "hours") next.amount = toFiniteNumber(value) * (prev.rate || 0);
+          return next;
+        }) }));
+      }, []);
+
+      const addLine = useCallback(() => {
+        setData((prev) => ({ ...prev, lines: [...prev.lines, makeEmptyEntry()] }));
+      }, []);
+
+      const removeLine = useCallback((index) => {
+        setData((prev) => ({ ...prev, lines: prev.lines.filter((_, i) => i !== index) }));
+      }, []);
+
+      const updateRate = useCallback((value) => {
+        setData((prev) => {
+          const rate = toFiniteNumber(value);
+          return { rate, lines: prev.lines.map((l) => ({ ...l, amount: toFiniteNumber(l.hours) * rate })) };
+        });
+      }, []);
+
+      const goPreview = () => {
+        const cleaned = (data?.lines || []).filter((l) => (l.description || "").trim() || toFiniteNumber(l.hours) > 0 || l.startTime || l.endTime);
+        if (!cleaned.length) { setNotice("Add at least one time entry before previewing."); return; }
+        setNotice("");
+        setData({ ...data, lines: sortLines(cleaned) });
+        setView("preview");
+      };
+
       useEffect(() => {
         if (view !== "preview") return;
         const measure = () => {
@@ -354,6 +401,7 @@ const HTML = `<!DOCTYPE html>
       const totalPages = summaryChunks.length + logChunks.length;
 
       const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 16, fontFamily: "'Inter', sans-serif", color: DARK, background: "#fff", outline: "none", boxSizing: "border-box" };
+      const entryInput = { padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "'Inter', sans-serif", color: DARK, background: "#fff", outline: "none", boxSizing: "border-box" };
       const labelStyle = { display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "#64748b", marginBottom: 6 };
       const sectionStyle = { background: "#fff", borderRadius: 12, padding: 28, marginBottom: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" };
       const thBase = { fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "#94a3b8", fontWeight: 700, padding: "12px 16px", textAlign: "left", borderBottom: "2px solid #e2e8f0" };
@@ -365,7 +413,7 @@ const HTML = `<!DOCTYPE html>
           <div data-view="upload" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f1f5f9", padding: "32px 24px" }}>
             <div data-upload-inner style={{ textAlign: "center", maxWidth: 520, padding: 48 }}>
               <h1 data-upload-title style={{ fontSize: 30, fontWeight: 700, color: DARK, marginBottom: 8 }}>Timesheet Generator</h1>
-              <p style={{ color: "#64748b", fontSize: 15, marginBottom: 40 }}>Import your Clockify CSV export to generate a timesheet</p>
+              <p style={{ color: "#64748b", fontSize: 15, marginBottom: 40 }}>Import your Clockify CSV export, or build a timesheet by hand</p>
               {notice && (
                 <p style={{ color: "#b45309", fontSize: 13, marginBottom: 20, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px" }}>
                   {notice}
@@ -384,6 +432,12 @@ const HTML = `<!DOCTYPE html>
                 <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed → Export → CSV</p>
                 <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
               </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0", color: "#94a3b8", fontSize: 13 }}>
+                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />or<div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+              </div>
+              <button onClick={startManual} style={{ ...btnBase, background: "#fff", color: TEAL, border: "2px solid " + TEAL, padding: "14px 24px", width: "100%", fontSize: 15 }}>
+                Create a timesheet manually
+              </button>
             </div>
           </div>
         );
@@ -403,7 +457,7 @@ const HTML = `<!DOCTYPE html>
                     Import Clockify CSV
                     <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
                   </label>
-                  <button onClick={() => setView("preview")} style={{ ...btnBase, background: TEAL, color: "#fff", padding: "10px 24px" }}>
+                  <button onClick={goPreview} style={{ ...btnBase, background: TEAL, color: "#fff", padding: "10px 24px" }}>
                     Preview →
                   </button>
                 </div>
@@ -433,16 +487,26 @@ const HTML = `<!DOCTYPE html>
 
               <div data-section style={{ ...sectionStyle, background: "#f8fafc" }}>
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 16 }}>Time Entries</h2>
-                <div style={{ fontSize: 13, color: "#64748b" }}>
+                <div style={{ marginBottom: 20, maxWidth: 220 }}>
+                  <label style={labelStyle}>Hourly Rate (R)</label>
+                  <input type="number" min="0" step="0.01" style={inputStyle} value={data.rate || ""} placeholder="0.00" onChange={(e) => updateRate(e.target.value)} />
+                </div>
+                <div>
                   {data.lines.map((l, i) => (
-                    <div data-entry-row key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < data.lines.length - 1 ? "1px solid #e2e8f0" : "none", gap: 12, alignItems: "center" }}>
-                      <span data-entry-date style={{ flexShrink: 0, width: 90 }}>{fmtDate(l.date)}</span>
-                      <span data-entry-tasks style={{ flex: 1, minWidth: 0 }}><TaskPills desc={l.description} /></span>
-                      <span data-entry-hours style={{ flexShrink: 0, width: 50, textAlign: "right" }}>{l.hours.toFixed(2)}h</span>
-                      <span data-entry-amount style={{ flexShrink: 0, width: 100, textAlign: "right", color: DARK, fontWeight: 500, whiteSpace: "nowrap" }}>{fmt(l.amount)}</span>
+                    <div data-entry-row key={i} style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 0", borderBottom: i < data.lines.length - 1 ? "1px solid #e2e8f0" : "none" }}>
+                      <input data-entry-date value={l.date} onChange={(e) => updateLine(i, "date", e.target.value)} placeholder="2026-06-15" style={{ ...entryInput, width: 120, flexShrink: 0 }} />
+                      <input data-entry-tasks value={l.description} onChange={(e) => updateLine(i, "description", e.target.value)} placeholder="Tasks, comma, separated" style={{ ...entryInput, flex: 1, minWidth: 120 }} />
+                      <button data-entry-del onClick={() => removeLine(i)} title="Remove entry" style={{ ...btnBase, flexShrink: 0, background: "#fee2e2", color: "#b91c1c", width: 38, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", width: "100%" }}>
+                        <input data-entry-start value={l.startTime} onChange={(e) => updateLine(i, "startTime", e.target.value)} placeholder="Start" style={{ ...entryInput, width: 90 }} />
+                        <input data-entry-end value={l.endTime} onChange={(e) => updateLine(i, "endTime", e.target.value)} placeholder="End" style={{ ...entryInput, width: 90 }} />
+                        <input data-entry-hours type="number" step="0.25" min="0" value={l.hours || ""} onChange={(e) => updateLine(i, "hours", toFiniteNumber(e.target.value))} placeholder="Hours" style={{ ...entryInput, width: 90 }} />
+                        <span data-entry-amount style={{ marginLeft: "auto", textAlign: "right", color: DARK, fontWeight: 600, whiteSpace: "nowrap", fontSize: 14 }}>{fmt(l.amount)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
+                <button onClick={addLine} style={{ ...btnBase, background: "#fff", color: TEAL, border: "1px dashed " + TEAL, padding: "10px 16px", marginTop: 16 }}>+ Add entry</button>
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTop: "2px solid " + TEAL }}>
                   <span style={{ fontSize: 20, fontWeight: 700, color: DARK, whiteSpace: "nowrap" }}>{fmt(totalAmount)}</span>
                 </div>
