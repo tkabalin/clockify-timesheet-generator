@@ -495,7 +495,7 @@ const HTML = `<!DOCTYPE html>
                 </div>
               </div>
 
-              <div data-section style={{ ...sectionStyle, background: "#f8fafc" }}>
+              <div data-section style={sectionStyle}>
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 16 }}>Time Entries</h2>
                 <div style={{ marginBottom: 20, maxWidth: 220 }}>
                   <label style={labelStyle}>Hourly Rate (R)</label>
