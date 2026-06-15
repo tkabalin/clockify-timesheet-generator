@@ -396,6 +396,18 @@ const HTML = `<!DOCTYPE html>
         });
       }, []);
 
+      const dragFrom = useRef(null);
+      const [dragOverIdx, setDragOverIdx] = useState(null);
+      const moveLine = useCallback((from, to) => {
+        setData((prev) => {
+          if (from == null || to == null || from === to) return prev;
+          const lines = prev.lines.slice();
+          const [moved] = lines.splice(from, 1);
+          lines.splice(to, 0, moved);
+          return { ...prev, lines };
+        });
+      }, []);
+
       const goPreview = () => {
         // Drop blank rows but keep the current order so edit and preview always match.
         // Entries are ordered once at import (buildData); we deliberately don't re-sort here.
@@ -523,7 +535,14 @@ const HTML = `<!DOCTYPE html>
                 </div>
                 <div>
                   {data.lines.map((l, i) => (
-                    <div data-entry-row key={i} style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 0", borderBottom: i < data.lines.length - 1 ? "1px solid #e2e8f0" : "none" }}>
+                    <div data-entry-row key={i}
+                      onDragOver={(e) => { e.preventDefault(); if (dragOverIdx !== i) setDragOverIdx(i); }}
+                      onDrop={(e) => { e.preventDefault(); moveLine(dragFrom.current, i); dragFrom.current = null; setDragOverIdx(null); }}
+                      style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 0", borderBottom: i < data.lines.length - 1 ? "1px solid #e2e8f0" : "none", background: dragOverIdx === i ? "#f0fafb" : "transparent", borderRadius: dragOverIdx === i ? 8 : 0 }}>
+                      <span data-entry-grip draggable title="Drag to reorder"
+                        onDragStart={(e) => { dragFrom.current = i; e.dataTransfer.effectAllowed = "move"; const row = e.currentTarget.parentNode; if (row) e.dataTransfer.setDragImage(row, 20, 20); try { e.dataTransfer.setData("text/plain", String(i)); } catch (_) {} }}
+                        onDragEnd={() => { dragFrom.current = null; setDragOverIdx(null); }}
+                        style={{ cursor: "grab", color: "#cbd5e1", fontSize: 18, lineHeight: 1, padding: "0 4px", flexShrink: 0, userSelect: "none", display: "flex", alignItems: "center" }}>⠿</span>
                       <input data-entry-date type="date" title="Date" value={l.date} onChange={(e) => updateLine(i, "date", e.target.value)} style={{ ...entryInput, width: 150, flexShrink: 0 }} />
                       <input data-entry-tasks value={l.description} onChange={(e) => updateLine(i, "description", e.target.value)} placeholder="Tasks, comma, separated" style={{ ...entryInput, flex: 1, minWidth: 120 }} />
                       <button data-entry-del onClick={() => removeLine(i)} title="Remove entry" style={{ ...btnBase, flexShrink: 0, background: "#fee2e2", color: "#b91c1c", width: 38, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
