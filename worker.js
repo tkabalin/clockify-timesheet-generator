@@ -397,10 +397,12 @@ const HTML = `<!DOCTYPE html>
       }, []);
 
       const goPreview = () => {
+        // Drop blank rows but keep the current order so edit and preview always match.
+        // Entries are ordered once at import (buildData); we deliberately don't re-sort here.
         const cleaned = (data?.lines || []).filter((l) => (l.description || "").trim() || toFiniteNumber(l.hours) > 0 || l.startTime || l.endTime);
         if (!cleaned.length) { setNotice("Add at least one time entry before previewing."); return; }
         setNotice("");
-        setData({ ...data, lines: sortLines(cleaned) });
+        setData({ ...data, lines: cleaned });
         setView("preview");
       };
 
