@@ -484,7 +484,7 @@ const HTML = `<!DOCTYPE html>
                   <div><label style={labelStyle}>Full Name</label><input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} /></div>
                   <div><label style={labelStyle}>Email</label><input style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 </div>
-                <div style={{ marginTop: 16 }}><label style={labelStyle}>Banking Details</label><textarea style={{ ...inputStyle, minHeight: 72, resize: "vertical" }} value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} placeholder={"Bank: FNB\\nAccount: 12345678\\nBranch: 250655"} /></div>
+                <div style={{ marginTop: 16 }}><label style={labelStyle}>Banking Details</label><textarea style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} placeholder={"Bank: FNB\\nAccount: 12345678\\nBranch: 250655"} /></div>
               </div>
 
               <div data-section style={sectionStyle}>
