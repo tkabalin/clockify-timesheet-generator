@@ -292,14 +292,24 @@ const HTML = `<!DOCTYPE html>
     };
 
     function parseClockifyCSV(text) {
+      // Supports both the Detailed report (per-entry: Start Date, Duration, Billable Rate/Amount,
+      // Start/End Time…) and the Summary report (grouped: Description, Time (decimal), Amount (R)).
       const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
-      return data.map((r) => ({
-        date: r["Start Date"] || "", description: r["Description"] || r["Task"] || "Development work",
-        hours: toFiniteNumber(r["Duration (decimal)"] || 0), duration: r["Duration (h)"] || "",
-        rate: parseMoney(r["Billable Rate (R)"] || r["Billable Rate"] || "0"),
-        amount: parseMoney(r["Billable Amount (R)"] || r["Billable Amount"] || "0"),
-        user: r["User"] || "", email: r["Email"] || "", startTime: r["Start Time"] || "", endTime: r["End Time"] || "",
-      })).filter((r) => r.hours > 0);
+      return data.map((r) => {
+        const hours = toFiniteNumber(r["Duration (decimal)"] ?? r["Time (decimal)"] ?? 0);
+        const amount = parseMoney(r["Billable Amount (R)"] ?? r["Billable Amount"] ?? r["Amount (R)"] ?? r["Amount"] ?? "0");
+        const rateCol = r["Billable Rate (R)"] ?? r["Billable Rate"];
+        // Summary reports have no rate column — derive it from amount ÷ hours.
+        const rate = rateCol != null ? parseMoney(rateCol) : (hours > 0 ? Math.round((amount / hours) * 100) / 100 : 0);
+        return {
+          date: r["Start Date"] || "",
+          description: r["Description"] || r["Task"] || "Development work",
+          hours, duration: r["Duration (h)"] || r["Time (h)"] || "",
+          rate, amount,
+          user: r["User"] || "", email: r["Email"] || "",
+          startTime: r["Start Time"] || "", endTime: r["End Time"] || "",
+        };
+      }).filter((r) => r.hours > 0);
     }
 
     function TimesheetGenerator() {
@@ -429,7 +439,7 @@ const HTML = `<!DOCTYPE html>
                   </svg>
                 </div>
                 <p style={{ color: DARK, fontSize: 15, fontWeight: 600 }}>Choose a Clockify CSV file</p>
-                <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed → Export → CSV</p>
+                <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed or Summary → Export → CSV</p>
                 <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0", color: "#94a3b8", fontSize: 13 }}>
