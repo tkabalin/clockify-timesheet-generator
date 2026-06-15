@@ -344,14 +344,13 @@ const HTML = `<!DOCTYPE html>
       const previewWrapRef = useRef(null);
       const innerRef = useRef(null);
 
-      const handleFile = useCallback((e) => {
-        const file = e.target?.files?.[0];
+      const processFile = useCallback((file) => {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => {
           const lines = parseClockifyCSV(ev.target.result);
           if (!lines.length) {
-            setNotice("No valid billable entries were found in this CSV. Please export a Clockify Detailed report with billable hours.");
+            setNotice("No valid billable entries were found in this CSV. Please export a Clockify Detailed or Summary report with billable hours.");
             return;
           }
           setNotice("");
@@ -364,6 +363,9 @@ const HTML = `<!DOCTYPE html>
         };
         reader.readAsText(file);
       }, []);
+
+      const handleFile = useCallback((e) => { processFile(e.target?.files?.[0]); }, [processFile]);
+      const handleCsvDrop = useCallback((e) => { e.preventDefault(); processFile(e.dataTransfer?.files?.[0]); }, [processFile]);
 
       const startManual = useCallback(() => {
         setNotice("");
@@ -464,13 +466,16 @@ const HTML = `<!DOCTYPE html>
               <label data-upload-box style={{ display: "block", border: "2px dashed #cbd5e1", borderRadius: 16, padding: "64px 40px", cursor: "pointer", background: "#fff", transition: "all 0.2s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = "#f0fafb"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; }}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = TEAL; e.currentTarget.style.background = "#f0fafb"; }}
+                onDragLeave={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; }}
+                onDrop={(e) => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.background = "#fff"; handleCsvDrop(e); }}
               >
                 <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
                   <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                   </svg>
                 </div>
-                <p style={{ color: DARK, fontSize: 15, fontWeight: 600 }}>Choose a Clockify CSV file</p>
+                <p style={{ color: DARK, fontSize: 15, fontWeight: 600 }}>Choose a Clockify CSV file, or drop it here</p>
                 <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed or Summary → Export → CSV</p>
                 <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
               </label>
@@ -495,7 +500,11 @@ const HTML = `<!DOCTYPE html>
                   <p style={{ color: "#64748b", fontSize: 14, marginTop: 4 }}>{data.lines.length} entries, {totalHours.toFixed(1)} hours</p>
                 </div>
                 <div data-btn-row style={{ display: "flex", gap: 8 }}>
-                  <label style={{ ...btnBase, background: "#e2e8f0", color: "#334155", padding: "10px 18px", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <label
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = "#cbeaf0"; }}
+                    onDragLeave={(e) => { e.currentTarget.style.background = "#e2e8f0"; }}
+                    onDrop={(e) => { e.currentTarget.style.background = "#e2e8f0"; handleCsvDrop(e); }}
+                    style={{ ...btnBase, background: "#e2e8f0", color: "#334155", padding: "10px 18px", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     Import Clockify CSV
                     <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
                   </label>
