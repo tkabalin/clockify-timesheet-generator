@@ -226,10 +226,10 @@ const HTML = `<!DOCTYPE html>
 
     const sortLines = (lines) => lines.slice().sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
 
-    const todayISO = () => {
-      const d = new Date();
-      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    };
+    const formatISO = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const todayISO = () => formatISO(new Date());
+    // Normalise any parseable date string to YYYY-MM-DD so the native date picker accepts it.
+    const dateToISO = (v) => { const d = parseDate(v); return d ? formatISO(d) : ""; };
 
     const makeEmptyEntry = () => ({ date: todayISO(), description: "", hours: 0, duration: "", rate: 0, amount: 0, user: "", email: "", startTime: "", endTime: "" });
 
@@ -304,7 +304,7 @@ const HTML = `<!DOCTYPE html>
         // Summary reports have no rate column — derive it from amount ÷ hours.
         const rate = rateCol != null ? parseMoney(rateCol) : (hours > 0 ? Math.round((amount / hours) * 100) / 100 : 0);
         return {
-          date: r["Start Date"] || "",
+          date: dateToISO(r["Start Date"]),
           description: r["Description"] || r["Task"] || "Development work",
           hours, duration: r["Duration (h)"] || r["Time (h)"] || "",
           rate, amount,
@@ -507,7 +507,7 @@ const HTML = `<!DOCTYPE html>
                 <div>
                   {data.lines.map((l, i) => (
                     <div data-entry-row key={i} style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "14px 0", borderBottom: i < data.lines.length - 1 ? "1px solid #e2e8f0" : "none" }}>
-                      <input data-entry-date value={l.date} onChange={(e) => updateLine(i, "date", e.target.value)} placeholder="2026-06-15" style={{ ...entryInput, width: 120, flexShrink: 0 }} />
+                      <input data-entry-date type="date" title="Date" value={l.date} onChange={(e) => updateLine(i, "date", e.target.value)} style={{ ...entryInput, width: 150, flexShrink: 0 }} />
                       <input data-entry-tasks value={l.description} onChange={(e) => updateLine(i, "description", e.target.value)} placeholder="Tasks, comma, separated" style={{ ...entryInput, flex: 1, minWidth: 120 }} />
                       <button data-entry-del onClick={() => removeLine(i)} title="Remove entry" style={{ ...btnBase, flexShrink: 0, background: "#fee2e2", color: "#b91c1c", width: 38, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", width: "100%" }}>
