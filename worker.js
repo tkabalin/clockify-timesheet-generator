@@ -409,7 +409,8 @@ const HTML = `<!DOCTYPE html>
       const totalHours = data?.lines.reduce((s, l) => s + l.hours, 0) || 0;
       const totalAmount = data?.lines.reduce((s, l) => s + l.amount, 0) || 0;
       const summaryChunks = data ? paginateSummaryRows(data.lines, bankDetails) : [];
-      const logChunks = data ? paginateLogRows(data.lines) : [];
+      const hasTimes = data ? data.lines.some((l) => l.startTime || l.endTime) : false;
+      const logChunks = hasTimes ? paginateLogRows(data.lines) : [];
       const totalPages = summaryChunks.length + logChunks.length;
 
       const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 16, fontFamily: "'Inter', sans-serif", color: DARK, background: "#fff", outline: "none", boxSizing: "border-box" };
