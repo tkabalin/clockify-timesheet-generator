@@ -230,6 +230,18 @@ const HTML = `<!DOCTYPE html>
     const todayISO = () => formatISO(new Date());
     // Normalise any parseable date string to YYYY-MM-DD so the native date picker accepts it.
     const dateToISO = (v) => { const d = parseDate(v); return d ? formatISO(d) : ""; };
+    // Normalise a time to 24h HH:MM (handles HH:MM:SS and am/pm); returns "" if invalid.
+    const toTimeValue = (t) => {
+      if (!t) return "";
+      const m = t.toString().trim().match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*(am|pm)?$/i);
+      if (!m) return "";
+      let h = +m[1];
+      const ap = m[3] && m[3].toLowerCase();
+      if (ap === "pm" && h < 12) h += 12;
+      if (ap === "am" && h === 12) h = 0;
+      if (h > 23 || +m[2] > 59) return "";
+      return String(h).padStart(2, "0") + ":" + m[2];
+    };
 
     const makeEmptyEntry = () => ({ date: todayISO(), description: "", hours: 0, duration: "", rate: 0, amount: 0, user: "", email: "", startTime: "", endTime: "" });
 
@@ -309,7 +321,7 @@ const HTML = `<!DOCTYPE html>
           hours, duration: r["Duration (h)"] || r["Time (h)"] || "",
           rate, amount,
           user: r["User"] || "", email: r["Email"] || "",
-          startTime: r["Start Time"] || "", endTime: r["End Time"] || "",
+          startTime: toTimeValue(r["Start Time"]), endTime: toTimeValue(r["End Time"]),
         };
       }).filter((r) => r.hours > 0);
     }
@@ -511,8 +523,8 @@ const HTML = `<!DOCTYPE html>
                       <input data-entry-tasks value={l.description} onChange={(e) => updateLine(i, "description", e.target.value)} placeholder="Tasks, comma, separated" style={{ ...entryInput, flex: 1, minWidth: 120 }} />
                       <button data-entry-del onClick={() => removeLine(i)} title="Remove entry" style={{ ...btnBase, flexShrink: 0, background: "#fee2e2", color: "#b91c1c", width: 38, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", width: "100%" }}>
-                        <input data-entry-start value={l.startTime} onChange={(e) => updateLine(i, "startTime", e.target.value)} placeholder="Start" style={{ ...entryInput, width: 90 }} />
-                        <input data-entry-end value={l.endTime} onChange={(e) => updateLine(i, "endTime", e.target.value)} placeholder="End" style={{ ...entryInput, width: 90 }} />
+                        <input data-entry-start type="time" title="Start time" value={l.startTime} onChange={(e) => updateLine(i, "startTime", e.target.value)} style={{ ...entryInput, width: 110 }} />
+                        <input data-entry-end type="time" title="End time" value={l.endTime} onChange={(e) => updateLine(i, "endTime", e.target.value)} style={{ ...entryInput, width: 110 }} />
                         <input data-entry-hours type="number" step="0.25" min="0" value={l.hours || ""} onChange={(e) => updateLine(i, "hours", toFiniteNumber(e.target.value))} placeholder="Hours" style={{ ...entryInput, width: 90 }} />
                         <span data-entry-amount style={{ marginLeft: "auto", textAlign: "right", color: DARK, fontWeight: 600, whiteSpace: "nowrap", fontSize: 14 }}>{fmt(l.amount)}</span>
                       </div>
