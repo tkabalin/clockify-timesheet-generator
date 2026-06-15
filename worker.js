@@ -122,10 +122,12 @@ const HTML = `<!DOCTYPE html>
       brandTealHover: "#005F69",
       brandTealDark: "#0F4C52",
       brandTealSurface: "#F0FAFB",
+      brandTealSurfaceStrong: "#CBEAF0",
       textPrimary: "#0F172A",
       textSecondary: "#334155",
       textSubtle: "#64748B",
       textTertiary: "#94A3B8",
+      textFaint: "#CBD5E1",
       surface1: "#FFFFFF",
       surface2: "#F8FAFC",
       surface3: "#F1F5F9",
@@ -134,6 +136,8 @@ const HTML = `<!DOCTYPE html>
       warningBg: "#FFFBEB",
       warningBorder: "#FDE68A",
       warningText: "#B45309",
+      dangerBg: "#FEE2E2",
+      dangerText: "#B91C1C",
       shadowSoft: "rgba(15, 23, 42, 0.06)",
       shadowStrong: "rgba(15, 23, 42, 0.15)",
     };
@@ -522,10 +526,10 @@ const HTML = `<!DOCTYPE html>
                 <p style={{ color: TOKENS.textTertiary, fontSize: 13, marginTop: 8 }}>Clockify → Reports → Detailed or Summary → Export → CSV</p>
                 <input type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
               </label>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0", color: "#94a3b8", fontSize: 13 }}>
-                <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />or<div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0", color: TOKENS.textTertiary, fontSize: 13 }}>
+                <div style={{ flex: 1, height: 1, background: TOKENS.borderDefault }} />or<div style={{ flex: 1, height: 1, background: TOKENS.borderDefault }} />
               </div>
-              <button onClick={startManual} style={{ ...btnBase, background: "#fff", color: TEAL, border: "2px solid " + TEAL, padding: "14px 24px", width: "100%", fontSize: 15 }}>
+              <button onClick={startManual} style={{ ...btnBase, background: TOKENS.surface1, color: TEAL, border: "2px solid " + TEAL, padding: "14px 24px", width: "100%", fontSize: 15 }}>
                 Create a timesheet manually
               </button>
             </div>
@@ -544,7 +548,7 @@ const HTML = `<!DOCTYPE html>
                 </div>
                 <div data-btn-row style={{ display: "flex", gap: 8 }}>
                   <label
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = "#cbeaf0"; }}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = TOKENS.brandTealSurfaceStrong; }}
                     onDragLeave={(e) => { e.currentTarget.style.background = TOKENS.surfaceButtonSecondary; }}
                     onDrop={(e) => { e.currentTarget.style.background = TOKENS.surfaceButtonSecondary; handleCsvDrop(e); }}
                     style={{ ...btnBase, background: TOKENS.surfaceButtonSecondary, color: TOKENS.textSecondary, padding: "10px 18px", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -594,10 +598,10 @@ const HTML = `<!DOCTYPE html>
                       <span data-entry-grip draggable title="Drag to reorder"
                         onDragStart={(e) => { dragFrom.current = i; e.dataTransfer.effectAllowed = "move"; const row = e.currentTarget.parentNode; if (row) e.dataTransfer.setDragImage(row, 20, 20); try { e.dataTransfer.setData("text/plain", String(i)); } catch (_) {} }}
                         onDragEnd={() => { dragFrom.current = null; setDragOverIdx(null); }}
-                        style={{ cursor: "grab", color: "#cbd5e1", fontSize: 18, lineHeight: 1, padding: "0 4px", flexShrink: 0, userSelect: "none", display: "flex", alignItems: "center" }}>⠿</span>
+                        style={{ cursor: "grab", color: TOKENS.textFaint, fontSize: 18, lineHeight: 1, padding: "0 4px", flexShrink: 0, userSelect: "none", display: "flex", alignItems: "center" }}>⠿</span>
                       <input data-entry-date type="date" title="Date" value={l.date} onChange={(e) => updateLine(i, "date", e.target.value)} style={{ ...entryInput, width: 150, flexShrink: 0 }} />
                       <input data-entry-tasks value={l.description} onChange={(e) => updateLine(i, "description", e.target.value)} placeholder="Tasks, comma, separated" style={{ ...entryInput, flex: 1, minWidth: 120 }} />
-                      <button data-entry-del onClick={() => removeLine(i)} title="Remove entry" style={{ ...btnBase, flexShrink: 0, background: "#fee2e2", color: "#b91c1c", width: 38, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                      <button data-entry-del onClick={() => removeLine(i)} title="Remove entry" style={{ ...btnBase, flexShrink: 0, background: TOKENS.dangerBg, color: TOKENS.dangerText, width: 38, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", width: "100%" }}>
                         <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1, padding: "0 4px", flexShrink: 0, visibility: "hidden" }}>⠿</span>
                         <input data-entry-start type="time" title="Start time" value={l.startTime} onChange={(e) => updateLine(i, "startTime", e.target.value)} style={{ ...entryInput, width: 110 }} />
@@ -608,7 +612,7 @@ const HTML = `<!DOCTYPE html>
                     </div>
                   ))}
                 </div>
-                <button onClick={addLine} style={{ ...btnBase, background: "#fff", color: TEAL, border: "1px dashed " + TEAL, padding: "10px 16px", marginTop: 16 }}>+ Add entry</button>
+                <button onClick={addLine} style={{ ...btnBase, background: TOKENS.surface1, color: TEAL, border: "1px dashed " + TEAL, padding: "10px 16px", marginTop: 16 }}>+ Add entry</button>
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 12, borderTop: "2px solid " + TEAL }}>
                   <span style={{ fontSize: 20, fontWeight: 700, color: DARK, whiteSpace: "nowrap" }}>{fmt(totalAmount)}</span>
                 </div>
