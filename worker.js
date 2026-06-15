@@ -246,7 +246,10 @@ const HTML = `<!DOCTYPE html>
     const makeEmptyEntry = () => ({ date: todayISO(), description: "", hours: 0, duration: "", rate: 0, amount: 0, user: "", email: "", startTime: "", endTime: "" });
 
     function buildData(lines) {
-      return { lines: sortLines(lines), rate: lines[0]?.rate || 0 };
+      // Detailed reports carry dates, so sort chronologically. Summary reports have no dates and
+      // Clockify exports them newest-first, so reverse them to read oldest-to-newest.
+      const ordered = lines.some((l) => parseDate(l.date)) ? sortLines(lines) : lines.slice().reverse();
+      return { lines: ordered, rate: lines[0]?.rate || 0 };
     }
 
     /* ── Print CSS — explicit page blocks with bottom-anchored footers ── */
